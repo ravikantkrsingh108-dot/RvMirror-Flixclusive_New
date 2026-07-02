@@ -46,38 +46,38 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
 
-            flx_files = list(Path("providers/RvMirror/build").glob("*.flx"))
+          flx_files = list(Path("providers/RvMirror/build").glob("*.flx"))
           if not flx_files:
-            raise SystemExit("No RvMirror .flx file was generated")
+              raise SystemExit("No RvMirror .flx file was generated")
 
-            if not any(flx.name == "RvMirrorFresh.flx" for flx in flx_files):
+          if not any(flx.name == "RvMirrorFresh.flx" for flx in flx_files):
               raise SystemExit("Expected a cache-busting RvMirrorFresh.flx artifact, got: " + ", ".join(flx.name for flx in flx_files))
 
-            flx = next(flx for flx in flx_files if flx.name == "RvMirrorFresh.flx")
+          flx = next(flx for flx in flx_files if flx.name == "RvMirrorFresh.flx")
           with ZipFile(flx) as archive:
-            names = archive.namelist()
-            print("Generated", flx)
-            print("Entries:", names)
+              names = archive.namelist()
+              print("Generated", flx)
+              print("Entries:", names)
 
-            if "manifest.json" not in names:
-              raise SystemExit("manifest.json is missing from the provider package")
+              if "manifest.json" not in names:
+                  raise SystemExit("manifest.json is missing from the provider package")
 
-            manifest = archive.read("manifest.json").decode("utf-8")
-            print(manifest)
+              manifest = archive.read("manifest.json").decode("utf-8")
+              print(manifest)
 
-            dex_names = [name for name in names if name.startswith("classes") and name.endswith(".dex")]
-            if not dex_names:
-              raise SystemExit("No classes.dex file was generated in the provider package")
+              dex_names = [name for name in names if name.startswith("classes") and name.endswith(".dex")]
+              if not dex_names:
+                  raise SystemExit("No classes.dex file was generated in the provider package")
 
-            dex = b"".join(archive.read(name) for name in dex_names)
+              dex = b"".join(archive.read(name) for name in dex_names)
 
           required_classes = [
-            b"Lcom/flixclusive/provider/rvmirror/RvMirror;",
-            b"Lcom/rvmirror/provider/RvMirror;",
+              b"Lcom/flixclusive/provider/rvmirror/RvMirror;",
+              b"Lcom/rvmirror/provider/RvMirror;",
           ]
           missing = [klass.decode("ascii") for klass in required_classes if klass not in dex]
           if missing:
-            raise SystemExit("Missing provider entry classes in dex: " + ", ".join(missing))
+              raise SystemExit("Missing provider entry classes in dex: " + ", ".join(missing))
           PY
 
       - name: Collect build artifacts
