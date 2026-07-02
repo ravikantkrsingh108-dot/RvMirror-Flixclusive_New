@@ -104,7 +104,13 @@ internal class MirrorClient(
         val obj = JSONObject(body)
         if (obj.optString("status") != "ok") return null
         val link = obj.optStringOrNull("video_link") ?: return null
-        return PlayerLink(url = link, referer = obj.optStringOrNull("referer") ?: base)
+        val referer = obj.optStringOrNull("referer") ?: base
+        val origin = referer.substringBefore("://") + "://" + referer.substringAfter("://").substringBefore('/')
+        val headers = Mirror.NEW_TV_HEADERS + mapOf(
+            "Referer" to referer,
+            "Origin" to origin,
+        )
+        return PlayerLink(url = link, referer = referer, headers = headers)
     }
 
     private suspend fun paginateEpisodes(
@@ -312,6 +318,7 @@ internal data class PostDetails(
 internal data class PlayerLink(
     val url: String,
     val referer: String?,
+    val headers: Map<String, String>,
 )
 
 private fun JSONObject.optStringOrNull(key: String): String? {

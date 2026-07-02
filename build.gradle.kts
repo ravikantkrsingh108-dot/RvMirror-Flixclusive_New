@@ -51,7 +51,7 @@ subprojects {
             image = "https://github.com/ravikantkrsingh108-dot.png",
         )
 
-        setRepository("https://github.com/ravikantkrsingh108-dot/RvMirror-Flixclusive")
+        setRepository("https://github.com/ravikantkrsingh108-dot/RvMirror-Flixclusive_New")
         id = "rvmirror-$projectName"
     }
 

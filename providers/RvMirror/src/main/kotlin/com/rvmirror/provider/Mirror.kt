@@ -103,6 +103,10 @@ internal object Mirror {
 
     fun ottOf(id: String): String = decodeId(id).first
 
+    fun savedCatalogUrl(): String = "rvmirror://saved"
+
+    fun isSavedCatalogUrl(url: String): Boolean = ottFromCatalogUrl(url) == "saved"
+
     fun catalogUrl(ott: String): String = "rvmirror://$ott"
 
     fun ottFromCatalogUrl(url: String): String = url.substringAfter("://").substringBefore('/')

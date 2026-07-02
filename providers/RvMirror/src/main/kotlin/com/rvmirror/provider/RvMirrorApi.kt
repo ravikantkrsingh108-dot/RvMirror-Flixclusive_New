@@ -7,6 +7,7 @@ import com.flixclusive.model.film.FilmSearchItem
 import com.flixclusive.model.film.SearchResponseData
 import com.flixclusive.model.film.common.tv.Episode
 import com.flixclusive.model.provider.ProviderCatalog
+import com.flixclusive.model.provider.link.Flag
 import com.flixclusive.model.provider.link.MediaLink
 import com.flixclusive.model.provider.link.Stream
 import com.flixclusive.provider.Provider
@@ -29,9 +30,17 @@ class RvMirrorApi(
     private val providerId get() = provider.name
 
     override val catalogs: List<ProviderCatalog> by lazy {
-        Mirror.PLATFORMS.map { platform ->
+        val savedCount = idStore.totalCount()
+        listOf(
             ProviderCatalog(
-                name = platform.label,
+                name = "Saved IDs ($savedCount)",
+                url = Mirror.savedCatalogUrl(),
+                canPaginate = false,
+                providerId = provider.name,
+            ),
+        ) + Mirror.PLATFORMS.map { platform ->
+            ProviderCatalog(
+                name = "${platform.label} (${idStore.count(platform.ott)})",
                 url = Mirror.catalogUrl(platform.ott),
                 canPaginate = false,
                 providerId = provider.name,
@@ -43,12 +52,27 @@ class RvMirrorApi(
         catalog: ProviderCatalog,
         page: Int,
     ): SearchResponseData<FilmSearchItem> {
+        if (Mirror.isSavedCatalogUrl(catalog.url)) {
+            val liveIds = loadPlatformHomeIds()
+            val ids = mergeTitleIds(liveIds, idStore.loadAll()).take(MAX_CATALOG_ITEMS)
+            val items = enrich(ids)
+
+            return SearchResponseData(
+                page = 1,
+                results = items,
+                hasNextPage = false,
+                totalPages = 1,
+            )
+        }
+
         val ott = Mirror.ottFromCatalogUrl(catalog.url)
         val liveIds = runCatching { mirror.homeIds(ott) }.getOrDefault(emptyList())
         idStore.rememberSeen(ott, liveIds)
 
-        val ids = mergeIds(liveIds, idStore.load(ott)).take(MAX_CATALOG_ITEMS)
-        val items = enrich(ott, ids)
+        val ids = mergeIds(liveIds, idStore.load(ott))
+            .map { MirrorTitleId(ott, it) }
+            .take(MAX_CATALOG_ITEMS)
+        val items = enrich(ids)
 
         return SearchResponseData(
             page = 1,
@@ -69,10 +93,8 @@ class RvMirrorApi(
         val query = title.trim()
         if (query.isBlank()) return SearchResponseData()
 
-        val ott = id?.let(Mirror::ottOf) ?: Mirror.PLATFORMS.first().ott
-        val results = mirror.search(ott, query)
-        idStore.rememberSeen(ott, results.map { it.id })
-        val items = enrich(ott, results.map { it.id }.take(MAX_SEARCH_ITEMS))
+        val searchIds = searchAllPlatforms(query).take(MAX_SEARCH_ITEMS)
+        val items = enrich(searchIds)
 
         return SearchResponseData(
             page = 1,
@@ -116,19 +138,42 @@ class RvMirrorApi(
             Stream(
                 name = film.title.ifBlank { "RvMirror" },
                 url = link.url,
+                flags = setOf(
+                    Flag.RequiresAuth(customHeaders = link.headers),
+                ),
             ),
         )
     }
 
-    private suspend fun enrich(ott: String, ids: List<String>): List<FilmSearchItem> =
+    private suspend fun loadPlatformHomeIds(): List<MirrorTitleId> = coroutineScope {
+        Mirror.PLATFORMS.map { platform ->
+            async(Dispatchers.IO) {
+                val ids = runCatching { mirror.homeIds(platform.ott) }.getOrDefault(emptyList())
+                idStore.rememberSeen(platform.ott, ids)
+                ids.map { MirrorTitleId(platform.ott, it) }
+            }
+        }.awaitAll().flatten()
+    }
+
+    private suspend fun searchAllPlatforms(query: String): List<MirrorTitleId> = coroutineScope {
+        Mirror.PLATFORMS.map { platform ->
+            async(Dispatchers.IO) {
+                val results = runCatching { mirror.search(platform.ott, query) }.getOrDefault(emptyList())
+                idStore.rememberSeen(platform.ott, results.map { it.id })
+                results.map { MirrorTitleId(platform.ott, it.id) }
+            }
+        }.awaitAll().flatten().distinctBy { Mirror.encodeId(it.ott, it.rawId) }
+    }
+
+    private suspend fun enrich(ids: List<MirrorTitleId>): List<FilmSearchItem> =
         coroutineScope {
             ids.chunked(CONCURRENCY).flatMap { chunk ->
-                chunk.map { rawId ->
+                chunk.map { titleId ->
                     async(Dispatchers.IO) {
                         runCatching {
-                            val details = mirror.post(ott, rawId)
-                            idStore.rememberSeen(ott, listOf(rawId) + details.suggestionIds)
-                            details.toFilmSearchItem(ott, rawId, providerId)
+                            val details = mirror.post(titleId.ott, titleId.rawId)
+                            idStore.rememberSeen(titleId.ott, listOf(titleId.rawId) + details.suggestionIds)
+                            details.toFilmSearchItem(titleId.ott, titleId.rawId, providerId)
                         }.getOrNull()
                     }
                 }.awaitAll()
@@ -141,9 +186,16 @@ class RvMirrorApi(
             addAll(cached)
         }.toList()
 
+    private fun mergeTitleIds(primary: List<MirrorTitleId>, cached: List<MirrorTitleId>): List<MirrorTitleId> =
+        LinkedHashMap<String, MirrorTitleId>().apply {
+            (primary + cached).forEach { titleId ->
+                putIfAbsent(Mirror.encodeId(titleId.ott, titleId.rawId), titleId)
+            }
+        }.values.toList()
+
     private companion object {
-        const val MAX_CATALOG_ITEMS = 160
-        const val MAX_SEARCH_ITEMS = 80
+        const val MAX_CATALOG_ITEMS = 300
+        const val MAX_SEARCH_ITEMS = 120
         const val CONCURRENCY = 8
     }
 }
