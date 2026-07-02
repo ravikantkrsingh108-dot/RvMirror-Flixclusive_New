@@ -68,12 +68,12 @@ subprojects {
         coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
         implementation("androidx.compose.runtime:runtime")
         implementation("org.jsoup:jsoup:1.22.2")
-        compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+        compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
         val coreStubs = "com.github.flixclusiveorg.core-stubs:provider:1.2.5"
         implementation(coreStubs)
         testImplementation(coreStubs)
-        testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+        testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
         testImplementation("junit:junit:4.13.2")
     }
 }
