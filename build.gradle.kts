@@ -57,7 +57,7 @@ subprojects {
 
     android {
         namespace = if (name == "RvMirror") {
-            "com.rvmirror.provider"
+            "com.flixclusive.provider.rvmirror"
         } else {
             "com.rvmirror.$projectName"
         }

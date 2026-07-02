@@ -1,4 +1,4 @@
-package com.rvmirror.provider
+package com.flixclusive.provider.rvmirror
 
 import android.util.Base64
 import java.net.URLDecoder

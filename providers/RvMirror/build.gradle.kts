@@ -12,6 +12,11 @@ flxProvider {
 
     changelog =
         """
+        # RvMirror 1.2.0
+        - Rebuild provider package from the Flixclusive template layout
+        - Move the entry class to com.flixclusive.provider.rvmirror.RvMirror
+        - Include a compatibility entry class for older cached metadata
+
         # RvMirror 1.1.1
         - Keep the provider entry class packaged so Flixclusive can load it
         - Align Android namespace with the provider class package
@@ -23,8 +28,8 @@ flxProvider {
         """.trimIndent()
 
     versionMajor = 1
-    versionMinor = 1
-    versionPatch = 1
+    versionMinor = 2
+    versionPatch = 0
     versionBuild = 0
 
     iconUrl = "https://raw.githubusercontent.com/ravikantkrsingh108-dot/RvMirror/main/RvMirror/icon.png"

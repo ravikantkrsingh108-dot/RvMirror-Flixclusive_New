@@ -40,6 +40,43 @@ jobs:
       - name: Build provider
         run: gradle make generateUpdaterJson --no-daemon
 
+      - name: Verify provider package
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          flx_files = list(Path("providers/RvMirror/build").glob("*.flx"))
+          if not flx_files:
+            raise SystemExit("No RvMirror .flx file was generated")
+
+          flx = flx_files[0]
+          with ZipFile(flx) as archive:
+            names = archive.namelist()
+            print("Generated", flx)
+            print("Entries:", names)
+
+            if "manifest.json" not in names:
+              raise SystemExit("manifest.json is missing from the provider package")
+
+            manifest = archive.read("manifest.json").decode("utf-8")
+            print(manifest)
+
+            dex_names = [name for name in names if name.startswith("classes") and name.endswith(".dex")]
+            if not dex_names:
+              raise SystemExit("No classes.dex file was generated in the provider package")
+
+            dex = b"".join(archive.read(name) for name in dex_names)
+
+          required_classes = [
+            b"Lcom/flixclusive/provider/rvmirror/RvMirror;",
+            b"Lcom/rvmirror/provider/RvMirror;",
+          ]
+          missing = [klass.decode("ascii") for klass in required_classes if klass not in dex]
+          if missing:
+            raise SystemExit("Missing provider entry classes in dex: " + ", ".join(missing))
+          PY
+
       - name: Collect build artifacts
         run: |
           mkdir -p publish

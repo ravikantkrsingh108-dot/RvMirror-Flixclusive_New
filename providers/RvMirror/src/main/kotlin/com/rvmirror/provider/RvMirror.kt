@@ -1,4 +1,4 @@
-package com.rvmirror.provider
+package com.flixclusive.provider.rvmirror
 
 import android.content.Context
 import androidx.annotation.Keep
@@ -9,7 +9,7 @@ import okhttp3.OkHttpClient
 
 @Keep
 @FlixclusiveProvider
-class RvMirror : Provider() {
+open class RvMirror : Provider() {
     override fun getApi(
         context: Context,
         client: OkHttpClient,

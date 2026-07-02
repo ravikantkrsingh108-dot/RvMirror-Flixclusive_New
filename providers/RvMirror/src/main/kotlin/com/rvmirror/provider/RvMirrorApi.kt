@@ -1,4 +1,4 @@
-package com.rvmirror.provider
+package com.flixclusive.provider.rvmirror
 
 import android.content.Context
 import com.flixclusive.model.film.Film

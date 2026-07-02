@@ -3,6 +3,6 @@
   "description": "RvMirror provider for Flixclusive with persisted discovered title IDs.",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://cdn.jsdelivr.net/gh/ravikantkrsingh108-dot/RvMirror-Flixclusive_New@builds/plugins.json"
+    "https://raw.githubusercontent.com/ravikantkrsingh108-dot/RvMirror-Flixclusive_New/builds/plugins.json"
   ]
 }

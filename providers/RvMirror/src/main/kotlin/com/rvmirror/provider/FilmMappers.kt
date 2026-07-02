@@ -1,4 +1,4 @@
-package com.rvmirror.provider
+package com.flixclusive.provider.rvmirror
 
 import com.flixclusive.model.film.FilmSearchItem
 import com.flixclusive.model.film.Genre
