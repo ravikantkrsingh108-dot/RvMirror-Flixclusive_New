@@ -1,0 +1,28 @@
+[
+    {
+        "authors": [
+            {
+                "name": "ravikantkrsingh108-dot",
+                "image": "https://github.com/ravikantkrsingh108-dot.png",
+                "socialLink": "https://github.com/ravikantkrsingh108-dot"
+            }
+        ],
+        "repositoryUrl": "https://github.com/ravikantkrsingh108-dot/RvMirror-Flixclusive_New",
+        "buildUrl": "https://raw.githubusercontent.com/ravikantkrsingh108-dot/RvMirror-Flixclusive_New/builds/RvMirrorFresh.flx",
+        "changelog": "# RvMirror 1.2.0\n- Rebuild provider package from the Flixclusive template layout\n- Move the entry class to com.flixclusive.provider.rvmirror.RvMirror\n- Include a compatibility entry class for older cached metadata\n\n# RvMirror 1.1.1\n- Keep the provider entry class packaged so Flixclusive can load it\n- Align Android namespace with the provider class package\n\n# RvMirror 1.1.0\n- Persist discovered mirror ids from home, search, metadata suggestions, and episodes\n- Merge saved ids back into catalogs to show more titles over time\n- Keep movie/show metadata and HLS stream extraction wired to the saved ids",
+        "versionName": "1.2.0",
+        "versionCode": 12000,
+        "adult": false,
+        "description": "Netflix, Prime Video and Disney+ Hotstar mirror. Browse each platform as its own\ncatalog, search across the mirror, and stream movies & shows. Discovered mirror\nids are saved locally so catalogs grow as the provider sees more titles.",
+        "iconUrl": "https://raw.githubusercontent.com/ravikantkrsingh108-dot/RvMirror/main/RvMirror/icon.png",
+        "language": {
+            "languageCode": "Multiple"
+        },
+        "name": "RvMirror",
+        "providerType": {
+            "type": "Movies, TV Shows, etc."
+        },
+        "status": "Working",
+        "id": "8ad4b6be1a1df77"
+    }
+]
