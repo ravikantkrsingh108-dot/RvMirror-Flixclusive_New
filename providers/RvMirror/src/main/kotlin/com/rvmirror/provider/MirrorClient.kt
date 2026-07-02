@@ -74,7 +74,7 @@ internal class MirrorClient(
             cookie = siteCookie(ott),
             referer = "${Mirror.BASE}/home",
         )
-        val details = parsePost(JSONObject(body))
+        val details = parsePost(ott, JSONObject(body))
         postCache[key] = details
         return details
     }
@@ -206,7 +206,7 @@ internal class MirrorClient(
         }
     }
 
-    private fun parsePost(obj: JSONObject): PostDetails {
+    private fun parsePost(ott: String, obj: JSONObject): PostDetails {
         val episodes = obj.optJSONArray("episodes")
         val isMovie = episodes == null || episodes.length() == 0 || episodes.isNull(0)
 
