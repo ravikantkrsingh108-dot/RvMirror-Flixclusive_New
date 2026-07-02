@@ -12,6 +12,10 @@ flxProvider {
 
     changelog =
         """
+        # RvMirror 1.1.1
+        - Keep the provider entry class packaged so Flixclusive can load it
+        - Align Android namespace with the provider class package
+        
         # RvMirror 1.1.0
         - Persist discovered mirror ids from home, search, metadata suggestions, and episodes
         - Merge saved ids back into catalogs to show more titles over time
@@ -20,7 +24,7 @@ flxProvider {
 
     versionMajor = 1
     versionMinor = 1
-    versionPatch = 0
+    versionPatch = 1
     versionBuild = 0
 
     iconUrl = "https://raw.githubusercontent.com/ravikantkrsingh108-dot/RvMirror/main/RvMirror/icon.png"

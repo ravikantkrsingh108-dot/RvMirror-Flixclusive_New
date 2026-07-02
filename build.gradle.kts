@@ -56,7 +56,11 @@ subprojects {
     }
 
     android {
-        namespace = "com.rvmirror.$projectName"
+        namespace = if (name == "RvMirror") {
+            "com.rvmirror.provider"
+        } else {
+            "com.rvmirror.$projectName"
+        }
     }
 
     dependencies {
@@ -66,6 +70,7 @@ subprojects {
         val coreLibraryDesugaring by configurations
 
         coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+        implementation("androidx.annotation:annotation:1.9.1")
         implementation("androidx.compose.runtime:runtime")
         implementation("org.jsoup:jsoup:1.22.2")
         compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
