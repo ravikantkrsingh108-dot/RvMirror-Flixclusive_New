@@ -1,0 +1,8 @@
+{
+  "name": "RvMirror Flixclusive",
+  "description": "RvMirror provider for Flixclusive with persisted discovered title IDs.",
+  "manifestVersion": 1,
+  "pluginLists": [
+    "https://cdn.jsdelivr.net/gh/ravikantkrsingh108-dot/RvMirror-Flixclusive@builds/plugins.json"
+  ]
+}
