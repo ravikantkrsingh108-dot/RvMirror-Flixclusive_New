@@ -46,11 +46,14 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
 
-          flx_files = list(Path("providers/RvMirror/build").glob("*.flx"))
+            flx_files = list(Path("providers/RvMirror/build").glob("*.flx"))
           if not flx_files:
             raise SystemExit("No RvMirror .flx file was generated")
 
-          flx = flx_files[0]
+            if not any(flx.name == "RvMirrorFresh.flx" for flx in flx_files):
+              raise SystemExit("Expected a cache-busting RvMirrorFresh.flx artifact, got: " + ", ".join(flx.name for flx in flx_files))
+
+            flx = next(flx for flx in flx_files if flx.name == "RvMirrorFresh.flx")
           with ZipFile(flx) as archive:
             names = archive.namelist()
             print("Generated", flx)

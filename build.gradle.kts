@@ -52,11 +52,11 @@ subprojects {
         )
 
         setRepository("https://github.com/ravikantkrsingh108-dot/RvMirror-Flixclusive_New")
-        id = "rvmirror-$projectName"
+        id = "rvmirror-fresh"
     }
 
     android {
-        namespace = if (name == "RvMirror") {
+        namespace = if (name == "RvMirrorFresh") {
             "com.flixclusive.provider.rvmirror"
         } else {
             "com.rvmirror.$projectName"

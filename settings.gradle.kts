@@ -4,8 +4,12 @@ plugins {
 
 rootProject.name = "RvMirror-Flixclusive"
 
-include("RvMirror")
+include("RvMirrorFresh")
 
 rootProject.children.forEach {
-    it.projectDir = file("providers/${it.name}")
+    it.projectDir = if (it.name == "RvMirrorFresh") {
+        file("providers/RvMirror")
+    } else {
+        file("providers/${it.name}")
+    }
 }

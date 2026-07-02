@@ -3,6 +3,8 @@ import com.flixclusive.model.provider.ProviderType
 import com.flixclusive.model.provider.Status
 
 flxProvider {
+    providerName = "RvMirror"
+
     description =
         """
         Netflix, Prime Video and Disney+ Hotstar mirror. Browse each platform as its own
