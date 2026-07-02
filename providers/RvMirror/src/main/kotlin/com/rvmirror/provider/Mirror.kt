@@ -1,6 +1,8 @@
 package com.rvmirror.provider
 
 import android.util.Base64
+import java.net.URLDecoder
+import java.net.URLEncoder
 import java.util.Calendar
 
 internal object Mirror {
@@ -84,9 +86,28 @@ internal object Mirror {
         "aHR0cHM6Ly9tb2JpZGV0ZWN0cy54eXo=",
     )
 
-    fun posterOf(id: String): String = "$POSTER_CDN/$id.jpg"
+    fun posterOf(ott: String, id: String): String = when (ott) {
+        "pv" -> "https://imgcdn.kim/pv/v/$id.jpg"
+        "hs" -> "https://imgcdn.kim/hs/v/$id.jpg"
+        else -> "$POSTER_CDN/$id.jpg"
+    }
 
-    fun episodeImageOf(id: String): String = "$EPISODE_CDN/$id.jpg"
+    fun backdropOf(ott: String, id: String): String = when (ott) {
+        "pv" -> "https://imgcdn.kim/pv/h/$id.jpg"
+        "hs" -> "https://imgcdn.kim/hs/h/$id.jpg"
+        else -> posterOf(ott, id)
+    }
+
+    fun episodeImageOf(ott: String, id: String): String = when (ott) {
+        "pv" -> "https://imgcdn.kim/pvepimg/$id.jpg"
+        "hs" -> "https://imgcdn.kim/hsepimg/$id.jpg"
+        else -> "$EPISODE_CDN/$id.jpg"
+    }
+
+    fun mobilePath(ott: String, endpoint: String): String = when (ott) {
+        "pv", "hs" -> "/mobile/$ott/$endpoint"
+        else -> "/mobile/$endpoint"
+    }
 
     fun decodeBase64(value: String): String =
         String(Base64.decode(value, Base64.DEFAULT)).trim()
@@ -106,6 +127,18 @@ internal object Mirror {
     fun savedCatalogUrl(): String = "rvmirror://saved"
 
     fun isSavedCatalogUrl(url: String): Boolean = ottFromCatalogUrl(url) == "saved"
+
+    fun savedYearCatalogUrl(year: Int): String = "rvmirror://saved/year/$year"
+
+    fun savedGenreCatalogUrl(genre: String): String = "rvmirror://saved/genre/${genre.urlEncode()}"
+
+    fun savedTypeCatalogUrl(type: String): String = "rvmirror://saved/type/$type"
+
+    fun savedCatalogKind(url: String): String? =
+        url.substringAfter("rvmirror://saved/", "").substringBefore('/').takeIf { it.isNotBlank() }
+
+    fun savedCatalogValue(url: String): String? =
+        url.substringAfter("rvmirror://saved/${savedCatalogKind(url)}/", "").takeIf { it.isNotBlank() }?.urlDecode()
 
     fun catalogUrl(ott: String): String = "rvmirror://$ott"
 
@@ -130,4 +163,8 @@ internal object Mirror {
         }
         return total.takeIf { it > 0 }
     }
+
+    private fun String.urlEncode(): String = URLEncoder.encode(this, "UTF-8")
+
+    private fun String.urlDecode(): String = URLDecoder.decode(this, "UTF-8")
 }

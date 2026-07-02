@@ -12,6 +12,8 @@ import com.flixclusive.model.provider.link.MediaLink
 import com.flixclusive.model.provider.link.Stream
 import com.flixclusive.provider.Provider
 import com.flixclusive.provider.ProviderApi
+import com.flixclusive.provider.filter.Filter
+import com.flixclusive.provider.filter.FilterGroup
 import com.flixclusive.provider.filter.FilterList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -29,16 +31,43 @@ class RvMirrorApi(
     private val idStore = MirrorIdStore(context.applicationContext)
     private val providerId get() = provider.name
 
-    override val catalogs: List<ProviderCatalog> by lazy {
+    override val catalogs: List<ProviderCatalog>
+        get() {
         val savedCount = idStore.totalCount()
-        listOf(
+        return listOf(
             ProviderCatalog(
                 name = "Saved IDs ($savedCount)",
                 url = Mirror.savedCatalogUrl(),
                 canPaginate = false,
                 providerId = provider.name,
             ),
-        ) + Mirror.PLATFORMS.map { platform ->
+            ProviderCatalog(
+                name = "Saved Movies (${idStore.countByType(true)})",
+                url = Mirror.savedTypeCatalogUrl("movie"),
+                canPaginate = false,
+                providerId = provider.name,
+            ),
+            ProviderCatalog(
+                name = "Saved TV Shows (${idStore.countByType(false)})",
+                url = Mirror.savedTypeCatalogUrl("tv"),
+                canPaginate = false,
+                providerId = provider.name,
+            ),
+        ) + idStore.years().map { year ->
+            ProviderCatalog(
+                name = "Saved $year (${idStore.countByYear(year)})",
+                url = Mirror.savedYearCatalogUrl(year),
+                canPaginate = false,
+                providerId = provider.name,
+            )
+        } + idStore.genres().map { genre ->
+            ProviderCatalog(
+                name = "$genre (${idStore.countByGenre(genre)})",
+                url = Mirror.savedGenreCatalogUrl(genre),
+                canPaginate = false,
+                providerId = provider.name,
+            )
+        } + Mirror.PLATFORMS.map { platform ->
             ProviderCatalog(
                 name = "${platform.label} (${idStore.count(platform.ott)})",
                 url = Mirror.catalogUrl(platform.ott),
@@ -48,13 +77,32 @@ class RvMirrorApi(
         }
     }
 
+    override val filters: FilterList
+        get() = FilterList(
+            FilterGroup(
+                "Filters",
+                Filter.Select("Platform", listOf("All") + Mirror.PLATFORMS.map { it.label }, 0),
+                Filter.Select("Type", listOf("All", "Movies", "TV Shows"), 0),
+                Filter.Select("Year", listOf("Any") + idStore.years().map(Int::toString), 0),
+                Filter.Select("Genre", listOf("Any") + idStore.genres(), 0),
+            ),
+        )
+
     override suspend fun getCatalogItems(
         catalog: ProviderCatalog,
         page: Int,
     ): SearchResponseData<FilmSearchItem> {
         if (Mirror.isSavedCatalogUrl(catalog.url)) {
-            val liveIds = loadPlatformHomeIds()
-            val ids = mergeTitleIds(liveIds, idStore.loadAll()).take(MAX_CATALOG_ITEMS)
+            val ids = when (Mirror.savedCatalogKind(catalog.url)) {
+                "type" -> when (Mirror.savedCatalogValue(catalog.url)) {
+                    "movie" -> idStore.loadByType(true)
+                    "tv" -> idStore.loadByType(false)
+                    else -> emptyList()
+                }
+                "year" -> Mirror.savedCatalogValue(catalog.url)?.toIntOrNull()?.let(idStore::loadByYear).orEmpty()
+                "genre" -> Mirror.savedCatalogValue(catalog.url)?.let(idStore::loadByGenre).orEmpty()
+                else -> mergeTitleIds(loadPlatformHomeIds(), idStore.loadAll())
+            }
             val items = enrich(ids)
 
             return SearchResponseData(
@@ -71,7 +119,6 @@ class RvMirrorApi(
 
         val ids = mergeIds(liveIds, idStore.load(ott))
             .map { MirrorTitleId(ott, it) }
-            .take(MAX_CATALOG_ITEMS)
         val items = enrich(ids)
 
         return SearchResponseData(
@@ -93,8 +140,9 @@ class RvMirrorApi(
         val query = title.trim()
         if (query.isBlank()) return SearchResponseData()
 
-        val searchIds = searchAllPlatforms(query).take(MAX_SEARCH_ITEMS)
-        val items = enrich(searchIds)
+        val filterOptions = filters.toMirrorFilterOptions()
+        val searchIds = searchAllPlatforms(query, filterOptions)
+        val items = enrich(searchIds).applyFilters(filterOptions)
 
         return SearchResponseData(
             page = 1,
@@ -155,8 +203,8 @@ class RvMirrorApi(
         }.awaitAll().flatten()
     }
 
-    private suspend fun searchAllPlatforms(query: String): List<MirrorTitleId> = coroutineScope {
-        Mirror.PLATFORMS.map { platform ->
+    private suspend fun searchAllPlatforms(query: String, options: MirrorFilterOptions): List<MirrorTitleId> = coroutineScope {
+        Mirror.PLATFORMS.filter { platform -> options.platform == null || platform.ott == options.platform }.map { platform ->
             async(Dispatchers.IO) {
                 val results = runCatching { mirror.search(platform.ott, query) }.getOrDefault(emptyList())
                 idStore.rememberSeen(platform.ott, results.map { it.id })
@@ -173,6 +221,7 @@ class RvMirrorApi(
                         runCatching {
                             val details = mirror.post(titleId.ott, titleId.rawId)
                             idStore.rememberSeen(titleId.ott, listOf(titleId.rawId) + details.suggestionIds)
+                            idStore.rememberDetails(titleId.ott, titleId.rawId, details)
                             details.toFilmSearchItem(titleId.ott, titleId.rawId, providerId)
                         }.getOrNull()
                     }
@@ -193,9 +242,45 @@ class RvMirrorApi(
             }
         }.values.toList()
 
+    private fun FilterList.toMirrorFilterOptions(): MirrorFilterOptions {
+        val group = firstOrNull()
+        val platformState = (group?.getOrNull(0) as? Filter.Select<*>)?.state ?: 0
+        val typeState = (group?.getOrNull(1) as? Filter.Select<*>)?.state ?: 0
+        val yearState = (group?.getOrNull(2) as? Filter.Select<*>)?.state ?: 0
+        val genreState = (group?.getOrNull(3) as? Filter.Select<*>)?.state ?: 0
+        val years = idStore.years()
+        val genres = idStore.genres()
+
+        return MirrorFilterOptions(
+            platform = Mirror.PLATFORMS.getOrNull(platformState - 1)?.ott,
+            type = typeState,
+            year = years.getOrNull(yearState - 1),
+            genre = genres.getOrNull(genreState - 1),
+        )
+    }
+
+    private fun List<FilmSearchItem>.applyFilters(options: MirrorFilterOptions): List<FilmSearchItem> =
+        filter { item ->
+            val matchesType = when (options.type) {
+                FILTER_MOVIES -> item.filmType.name.equals("MOVIE", ignoreCase = true)
+                FILTER_TV_SHOWS -> item.filmType.name.equals("TV_SHOW", ignoreCase = true)
+                else -> true
+            }
+            val matchesYear = options.year == null || item.year == options.year
+            val matchesGenre = options.genre == null || item.genres.any { it.name.equals(options.genre, ignoreCase = true) }
+            matchesType && matchesYear && matchesGenre
+        }
+
     private companion object {
-        const val MAX_CATALOG_ITEMS = 300
-        const val MAX_SEARCH_ITEMS = 120
         const val CONCURRENCY = 8
+        const val FILTER_MOVIES = 1
+        const val FILTER_TV_SHOWS = 2
     }
 }
+
+private data class MirrorFilterOptions(
+    val platform: String?,
+    val type: Int,
+    val year: Int?,
+    val genre: String?,
+)

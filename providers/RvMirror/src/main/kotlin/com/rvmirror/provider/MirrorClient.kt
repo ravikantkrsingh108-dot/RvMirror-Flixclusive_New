@@ -48,7 +48,7 @@ internal class MirrorClient(
     suspend fun search(ott: String, query: String): List<SearchItem> {
         val encoded = URLEncoder.encode(query, "UTF-8")
         val body = get(
-            url = "${Mirror.BASE}/mobile/search.php?s=$encoded&t=${unixTime()}",
+            url = "${Mirror.BASE}${Mirror.mobilePath(ott, "search.php")}?s=$encoded&t=${unixTime()}",
             headers = Mirror.SITE_HEADERS,
             cookie = siteCookie(ott),
             referer = "${Mirror.BASE}/home",
@@ -69,7 +69,7 @@ internal class MirrorClient(
         postCache[key]?.let { return it }
 
         val body = get(
-            url = "${Mirror.BASE}/mobile/post.php?id=$rawId&t=${unixTime()}",
+            url = "${Mirror.BASE}${Mirror.mobilePath(ott, "post.php")}?id=$rawId&t=${unixTime()}",
             headers = Mirror.SITE_HEADERS,
             cookie = siteCookie(ott),
             referer = "${Mirror.BASE}/home",
@@ -109,6 +109,7 @@ internal class MirrorClient(
         val headers = Mirror.NEW_TV_HEADERS + mapOf(
             "Referer" to referer,
             "Origin" to origin,
+            "Cookie" to "hd=on",
         )
         return PlayerLink(url = link, referer = referer, headers = headers)
     }
@@ -123,13 +124,13 @@ internal class MirrorClient(
         var page = startPage
         while (page < startPage + MAX_EPISODE_PAGES) {
             val body = get(
-                url = "${Mirror.BASE}/mobile/episodes.php?s=$seasonId&series=$rawId&t=${unixTime()}&page=$page",
+                url = "${Mirror.BASE}${Mirror.mobilePath(ott, "episodes.php")}?s=$seasonId&series=$rawId&t=${unixTime()}&page=$page",
                 headers = Mirror.SITE_HEADERS,
                 cookie = siteCookie(ott),
                 referer = "${Mirror.BASE}/home",
             )
             val obj = JSONObject(body)
-            out += parseEpisodes(obj.optJSONArray("episodes"))
+            out += parseEpisodes(ott, obj.optJSONArray("episodes"))
             if (obj.optInt("nextPageShow", 0) == 0) break
             page++
         }
@@ -221,13 +222,13 @@ internal class MirrorClient(
             isMovie = isMovie,
             suggestionIds = obj.optJSONArray("suggest").mapIds(),
             seasonRefs = obj.optJSONArray("season").mapSeasonRefs(),
-            firstPageEpisodes = parseEpisodes(episodes),
+            firstPageEpisodes = parseEpisodes(ott, episodes),
             nextPageShow = obj.optInt("nextPageShow", 0),
             nextPageSeason = obj.optStringOrNull("nextPageSeason"),
         )
     }
 
-    private fun parseEpisodes(array: JSONArray?): List<EpItem> {
+    private fun parseEpisodes(ott: String, array: JSONArray?): List<EpItem> {
         if (array == null) return emptyList()
         return buildList {
             for (index in 0 until array.length()) {
@@ -240,7 +241,7 @@ internal class MirrorClient(
                         season = obj.optString("s").replace("S", "").toIntOrNull(),
                         title = obj.optStringOrNull("t"),
                         runtime = obj.optString("time").replace("m", "").trim().toIntOrNull(),
-                        image = Mirror.episodeImageOf(id),
+                        image = Mirror.episodeImageOf(ott, id),
                     ),
                 )
             }
